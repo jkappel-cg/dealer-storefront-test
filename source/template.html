@@ -1,0 +1,875 @@
+<title>Dealer Storefront</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout concept: consumer dealer storefront. Header scrolls away, then a compact header + section tabs pin to the top.
+   Tokens come from the Figma file (Chassis values read from the design). */
+@font-face{font-family:'Graphik';font-weight:400;font-display:swap;src:url(data:font/woff2;base64,__GRAPHIK_400__) format('woff2')}
+@font-face{font-family:'Graphik';font-weight:500;font-display:swap;src:url(data:font/woff2;base64,__GRAPHIK_500__) format('woff2')}
+@font-face{font-family:'Graphik';font-weight:600;font-display:swap;src:url(data:font/woff2;base64,__GRAPHIK_600__) format('woff2')}
+@font-face{font-family:'Rund Display';font-weight:600;font-display:swap;src:url(data:font/woff2;base64,__RUND_600__) format('woff2')}
+:root{
+  --ink:#0d1722; --mid:#5e6976; --ph:#79828d; --line:#d8dbde; --canvas:#f4f6f9; --star:#4497f6; --white:#fff;
+  --blue:#0763d3; --blue-d:#0552ad; --navy:#05317b; --deal:#078a0b; --open:#006200; --dark:#1b2530; --err:#c42b1c;
+  --font-body:'Graphik',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-head:'Rund Display','Graphik',system-ui,sans-serif;
+  --cb-h:92px; --tabs-h:44px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--ink);font:400 16px/24px var(--font-body);-webkit-font-smoothing:antialiased}
+body.locked{overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+a{color:var(--blue)}
+h1,h2,h3{font-family:var(--font-head);font-weight:600;margin:0;color:var(--ink)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ic.lg{width:20px;height:20px}
+.rail{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* nav */
+.nav{background:var(--white);border-bottom:1px solid var(--line);height:60px}
+.nav .rail{height:100%;display:flex;align-items:center;justify-content:space-between}
+.nav img{height:24px;width:auto;display:block}
+.avatar-nav{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font:500 12px/1 var(--font-body)}
+
+/* dealer header */
+.dhead{background:var(--canvas);padding-block:16px 16px}
+.dhead-top{display:flex;align-items:center;gap:12px;min-height:48px}
+.dlogo-img{mix-blend-mode:multiply;height:30px;max-width:100%;min-width:0;width:auto;display:block}
+.badge-img{height:28px;width:auto;display:block}
+.dlogo{height:40px;padding:0 10px;border:1px solid var(--line);border-radius:4px;background:#fff;display:flex;align-items:center;font:600 13px/14px var(--font-head);letter-spacing:.02em;color:var(--ink);text-transform:uppercase}
+.dname{font-size:22px;line-height:24px;margin:8px 0 8px}
+.rating-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rating-row .num{font:600 20px/24px var(--font-head)}
+.rating-row .cnt{font-size:16px;color:var(--blue);text-decoration:none;gap:0}
+.rating-row .cnt:hover{text-decoration:underline}
+.stars{position:relative;display:inline-flex;height:16px;width:80px;flex:none}
+.stars svg{width:16px;height:16px;flex:none}
+.stars .bg{display:flex;color:#c5cad0}
+.stars .fg{position:absolute;inset:0 auto 0 0;display:flex;overflow:hidden;color:var(--star)}
+.stars.out .bg{color:var(--star)}
+.stars.sm,.stars.sm svg{height:14px}.stars.sm{width:75px}.stars.sm svg{width:15px}
+.actions{display:flex;gap:4px;margin-top:16px;flex-wrap:nowrap}
+.act{display:inline-flex;align-items:center;gap:4px;height:44px;padding:0 6px;border-radius:60px;font:500 14px/20px var(--font-body);white-space:nowrap;color:var(--ink);border:1px solid transparent;text-decoration:none}
+.act:hover{background:rgba(13,23,34,.06)}
+.act.primary{border-color:var(--ink);padding:0 11px}
+.act[aria-pressed="true"] .ic{fill:currentColor}
+@media(max-width:359px){.act{padding:0 4px;font-size:13px}.act.primary{padding:0 8px}}
+@media(max-width:339px){.act:not(.primary) .ic{display:none}}
+@media(min-width:420px){.actions{gap:8px}.act{padding:0 10px;gap:6px}.act.primary{padding:0 14px}}
+
+/* compact bar + tabs */
+.compact{position:fixed;top:0;left:0;right:0;z-index:30;background:var(--canvas);transform:translateY(-101%);transition:transform .18s ease;padding-top:env(safe-area-inset-top,0px);pointer-events:none;visibility:hidden}
+.compact.show{transform:none;pointer-events:auto;visibility:visible}
+.compact .rail{padding-top:12px;padding-bottom:8px}
+.compact .cname{font:600 18px/24px var(--font-head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compact .actions{margin-top:6px}
+.compact .act{height:40px}
+.tabs{position:sticky;top:var(--cb-h);z-index:31;background:var(--canvas);box-shadow:0 2px 6px rgba(13,23,34,.12)}
+.tabs .rail{display:flex}
+.tab{flex:1;height:var(--tabs-h);display:grid;place-items:center;font:400 16px/20px var(--font-body);color:var(--mid);border-bottom:3px solid transparent;position:relative}
+.tab:hover{color:var(--ink)}
+.tab[aria-current="true"]{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* inventory */
+.inv-top{padding-block:16px 8px;display:grid;gap:16px}
+.dsort,.sidebar,.promo,.nav-links,.nav-ic,.meta,.sum-badge,.cats,.d{display:none}
+.pp{display:inline}
+.pill-row{display:flex;gap:8px}
+.pill{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;border:1px solid var(--ink);border-radius:60px;font:500 14px/20px var(--font-body);background:#fff}
+.pill:hover{background:var(--canvas)}
+.pill .badge{min-width:18px;height:18px;border-radius:9px;background:var(--blue);color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 5px}
+.count-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.link{color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.link:hover{text-decoration:underline}
+.grid-wrap{border-top:1px solid var(--line);background:var(--white)}
+.grid{display:grid;gap:16px;padding-block:16px 8px;grid-template-columns:1fr}
+.tile{background:#fff;border:1px solid var(--line);border-radius:24px;padding:12px 12px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(13,23,34,.08)}
+.photo{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:319/214;background:var(--line)}
+.photo svg.car{display:block;width:100%;height:100%}
+.fav{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 1px 4px rgba(13,23,34,.25)}
+.fav[aria-pressed="true"]{color:var(--blue)}.fav[aria-pressed="true"] .ic{fill:currentColor}
+.drop{position:absolute;left:12px;bottom:12px;background:var(--deal);color:#fff;border-radius:4px;padding:4px 8px;text-align:center;font:400 12px/14px var(--font-body)}
+.drop b{display:block;font-weight:500}
+.tbody{padding:0 4px;display:flex;flex-direction:column;gap:12px}
+.spons{font-size:12px;line-height:16px;color:var(--ink)}
+.ttl{font-size:20px;line-height:24px}
+.sub{font-size:14px;line-height:18px;display:flex;gap:4px;margin-top:4px}
+.sub .dot{color:var(--ph)}
+.loc{display:flex;gap:4px;font-size:14px;line-height:18px}
+.loc small{display:block;font-size:12px;color:var(--mid);line-height:16px}
+.pricerow{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.ttlrow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.kebab{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none;margin:-2px -6px 0 0}
+.kebab:hover{background:var(--canvas)}
+.deal{display:inline-flex;align-items:center;gap:4px;font:600 14px/16px var(--font-head)}
+.deal i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;color:#fff;flex:none}
+.deal i .ic{width:10px;height:10px;stroke-width:3}
+.info-btn{display:inline-grid;place-items:center;color:var(--ink)}
+.info-btn .ic{width:13px;height:13px}
+.cert{font-size:12px;line-height:16px;margin-top:6px}
+.price{text-align:right}
+.price b{display:block;font:600 20px/26px var(--font-head)}
+.price .mo{display:block;font-size:12px;line-height:18px;color:var(--blue)}
+.price .fee{display:block;font-size:10px;line-height:12px;text-decoration:underline;margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 16px;border-radius:60px;font:600 16px/20px var(--font-body);white-space:nowrap;border:1px solid transparent}
+.btn.fill{background:var(--blue);color:#fff}.btn.fill:hover{background:var(--blue-d)}
+.btn.line{border-color:var(--ink);background:#fff}.btn.line:hover{background:var(--canvas)}
+.btn.block{width:100%}
+.btn.sm{height:36px;font-size:14px;font-weight:500}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.empty{padding:48px 16px;text-align:center;display:grid;gap:12px;justify-items:center}
+.empty p{margin:0;color:var(--mid)}
+.pager{display:flex;justify-content:center;gap:8px;padding:16px 0 24px}
+.pg{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font:500 14px/1 var(--font-body)}
+.pg:hover{background:var(--canvas)}
+.pg[aria-current="true"]{background:var(--dark);color:#fff}
+.pg[disabled]{opacity:.35;cursor:default}
+@media(min-width:720px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1080px){.grid{grid-template-columns:repeat(3,1fr)}}
+
+/* sections */
+.sec{background:#fff;padding-block:24px;margin:8px 8px 0;border-radius:16px}
+.inv-wrap{background:#fff;border-radius:16px;margin:8px 8px 0}
+.mapbtn{display:block;width:100%;padding:0;cursor:pointer}
+.map>img{width:100%;height:100%;object-fit:cover;display:block}
+.icon-copy{display:inline-grid;place-items:center;width:28px;height:28px;margin:-4px 0 -4px 4px;border-radius:50%;color:var(--mid);vertical-align:middle}
+.icon-copy:hover{background:var(--canvas);color:var(--ink)}
+.sec h2{font-size:18px;line-height:24px}
+.sec h2.lg{font-size:20px}
+.rv-grid{grid-template-columns:minmax(0,1fr);display:grid;gap:16px;margin-top:16px}
+.summary{min-width:0;grid-template-columns:minmax(0,1fr);background:var(--canvas);border-radius:12px;padding:16px;display:grid;gap:16px;align-content:start}
+.sum-top{display:flex;align-items:center;gap:16px}
+.big{font:600 36px/40px var(--font-head)}
+.sum-top .cnt{color:var(--mid);font-size:16px}
+.dist{display:grid;gap:4px}
+.drow{display:grid;grid-template-columns:56px 1fr 40px;align-items:center;gap:12px;height:24px;text-align:left;width:100%}
+.drow .lbl{color:var(--blue)}
+.drow:hover .lbl{text-decoration:underline}
+.drow[aria-pressed="true"] .lbl{font-weight:500;text-decoration:underline}
+.bar{height:8px;border-radius:4px;background:#dfe3e8;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue)}
+.drow .pct{font:600 16px/24px var(--font-head);text-align:right}
+.ver{font-size:14px;line-height:18px;margin:0}
+.ver-more{font-size:14px;line-height:20px;color:var(--mid);margin:8px 0 0;padding:12px;background:#fff;border-radius:8px}
+.field{position:relative}
+.input{width:100%;height:48px;border:1px solid #79828d;border-radius:8px;padding:0 12px;font:400 16px/24px var(--font-body);background:#fff;color:var(--ink)}
+.input::placeholder{color:var(--mid)}
+.field .ic{position:absolute;left:14px;top:16px;color:var(--ink)}
+.field .input.s{padding-left:44px}
+select.input{appearance:none;padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230d1722' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+textarea.input{height:auto;min-height:112px;padding:12px;resize:vertical}
+.rtop{display:grid;gap:12px;margin-bottom:12px}
+.tools{display:grid;grid-template-columns:1fr auto;gap:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:16px;background:var(--canvas);font-size:14px;border:1px solid var(--line)}
+.chip.on{background:#e8f1fc;border-color:var(--blue);color:var(--blue)}
+.rv{padding:20px 0;border-top:1px solid var(--line);display:grid;gap:8px}
+.rv:first-child{border-top:0;padding-top:4px}
+.rv-head{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap}
+.av{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font:500 14px/1 var(--font-body);flex:none}
+.rv-meta{flex:1;min-width:0}
+.rv-meta .n{font-weight:500;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rv-right{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.tag{font-size:12px;line-height:16px;font-weight:400;color:#1c6b1f;background:#f1faf1;border:1px solid #8fcf92;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.purch,.mgmt{font-size:12px;line-height:16px;color:var(--mid)}
+.rv-date{font-size:12px;color:var(--mid);white-space:nowrap}
+.rv-text{margin:0;overflow-wrap:anywhere}
+.rv-text.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rv-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;line-height:16px}
+.help{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:60px;font:500 14px/20px var(--font-body);background:#fff}
+.help[aria-pressed="true"]{border-color:var(--blue);color:var(--blue)}
+.help[aria-pressed="true"] .ic{fill:currentColor}
+.reply{margin-top:4px;margin-left:12px;padding:12px;background:var(--canvas);border-radius:8px;display:grid;gap:4px}
+.reply .rh{display:flex;justify-content:space-between;gap:8px;font-weight:500}
+.reply .rh span{font-size:12px;color:var(--mid);font-weight:400}
+.reply p{margin:0}
+.more-row{display:grid;gap:12px;margin-top:8px}
+@media(min-width:900px){.rv-grid{grid-template-columns:340px 1fr;gap:40px;align-items:start}.summary{position:sticky;top:calc(var(--cb-h) + var(--tabs-h) + 16px)}.more-row{grid-template-columns:auto auto;justify-content:start}}
+
+.about-grid{display:grid;gap:24px;margin-top:16px}
+.alist{display:grid;gap:16px;align-content:start}
+.arow{display:flex;gap:12px;align-items:flex-start}
+.arow .ic{margin-top:4px}
+.arow .stack{display:grid;gap:2px}
+.is-open{color:var(--open)}
+.hours{display:grid;grid-template-columns:auto auto;gap:2px 24px;font-size:14px;line-height:20px;margin-top:6px;justify-content:start}
+.copy{display:inline-flex;align-items:center;gap:4px;color:var(--blue);font-size:14px;margin-left:8px}
+.map{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);display:block;aspect-ratio:1078/870;background:#e6ecef}
+.map>svg{width:100%;height:100%;display:block}
+.map .mlabel{position:absolute;left:12px;bottom:12px;background:#fff;border-radius:60px;padding:6px 12px;font:500 14px/20px var(--font-body);color:var(--ink);box-shadow:0 1px 4px rgba(13,23,34,.25);display:inline-flex;gap:6px;align-items:center}
+.award{display:flex;gap:16px;align-items:center;background:#e4f5fe;border-radius:12px;padding:16px}
+.award-img{width:96px;height:auto;flex:none;display:block}
+.award b{display:block;font-weight:500}
+.award p{margin:4px 0 0;font-size:14px;line-height:20px}
+@media(min-width:900px){.about-grid{grid-template-columns:1fr 1fr;gap:40px}}
+.near{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:16px 16px 8px;margin:0 -16px;scrollbar-width:thin}
+.ncard{flex:0 0 272px;scroll-snap-align:start;border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:6px;align-content:start;font-size:14px;line-height:20px;background:#fff;text-align:left}
+.ncard:hover{box-shadow:0 2px 8px rgba(13,23,34,.14)}
+.ncard h3{font:500 16px/22px var(--font-body)}
+.ncard .r{display:flex;gap:6px;align-items:center;font-weight:500;font-size:16px}
+.ncard .r>span:not(.stars){font-weight:400;color:var(--mid)}
+.ncard .nl{display:flex;gap:6px;align-items:center;font-size:14px;line-height:20px}
+.ncard .r{gap:6px}
+.near-wrap{position:relative}
+.nav-arrows{display:none;gap:8px}
+@media(min-width:900px){.nav-arrows{display:flex}}
+.sec-head{display:flex;justify-content:space-between;align-items:center}
+.foot{background:var(--navy);color:#fff;padding-block:20px;font-size:12px;line-height:16px;min-height:60px}
+.foot .rail{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap;color:#cfd9eb}
+
+/* sheets */
+.overlay[hidden],[hidden]{display:none!important}
+.overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.scrim{position:absolute;inset:0;background:rgba(13,23,34,.5);opacity:0;transition:opacity .25s ease}
+.sheet{position:relative;background:#fff;width:100%;max-width:560px;max-height:calc(100dvh - 48px);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(13,23,34,.2);transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;min-height:0;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet.full{height:calc(100dvh - 0px);max-height:none;border-radius:0}
+.overlay.open .scrim{opacity:1}.overlay.open .sheet{transform:none}
+.sheet>form{display:flex;flex-direction:column;min-height:0;flex:1}
+.sh-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 16px;border-bottom:1px solid var(--line);min-height:64px;flex:none}
+.sh-head h2{font-size:18px;line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sh-head.center{display:grid;grid-template-columns:1fr auto 1fr}
+.sh-head.center h2{text-align:center;font-size:20px}
+.icon-btn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none}
+.icon-btn:hover{background:var(--canvas)}
+.sh-body{padding:16px;overflow:auto;flex:1;min-height:0;display:grid;gap:16px;align-content:start;-webkit-overflow-scrolling:touch}
+.sh-foot{display:flex;gap:12px;padding:12px 16px;border-top:1px solid var(--line);flex:none}
+.sh-foot .btn{flex:1}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lab{display:grid;gap:4px;font-size:16px}
+.lab.err .input{border-color:var(--err)}
+.emsg{color:var(--err);font-size:12px;line-height:16px}
+.sheet.full .sh-body{background:var(--canvas);gap:8px}
+.acc{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(13,23,34,.16)}
+.acc>button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 16px;min-height:52px;font:500 16px/24px var(--font-body)}
+.acc>button .ic{transition:transform .15s}
+.acc>button[aria-expanded="true"] .ic{transform:rotate(180deg)}
+.acc .panel{padding:4px 16px 16px;display:grid;gap:12px}
+.acc .sel{font-size:14px;color:var(--blue);margin-left:8px;font-weight:400}
+.opt{display:flex;align-items:center;gap:12px;min-height:36px}
+.opt input{width:20px;height:20px;accent-color:var(--blue);flex:none}
+.swatch{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);flex:none}
+.radio-list{display:grid}
+.radio-list .opt{padding:6px 0;border-bottom:1px solid var(--line)}
+.radio-list .opt:last-child{border-bottom:0}
+@media(min-width:720px){
+  .overlay{align-items:center}
+  .sheet,.sheet.full{border-radius:16px;max-height:min(760px,calc(100dvh - 64px));height:auto;transform:translateY(24px);opacity:0;transition:transform .25s ease,opacity .2s ease}
+  .sheet.full{height:min(760px,calc(100dvh - 64px))}
+  .overlay.open .sheet{opacity:1}
+}
+.success{display:grid;gap:12px;justify-items:center;text-align:center;padding:32px 16px}
+.success .ok{width:56px;height:56px;border-radius:50%;background:var(--deal);color:#fff;display:grid;place-items:center}
+.success .ok .ic{width:28px;height:28px;stroke-width:2.6}
+.success p{margin:0;color:var(--mid)}
+.numrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.numrow:last-child{border-bottom:0}
+.numrow small{display:block;color:var(--mid);font-size:12px;line-height:16px}
+.numrow .n{font-weight:500;font-size:18px}
+.starpick{display:flex;gap:4px}
+.starpick button{width:40px;height:40px;display:grid;place-items:center;color:#c5cad0}
+.starpick button.on{color:var(--blue)}
+.starpick svg{width:28px;height:28px}
+
+/* toast + notes */
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,16px);background:var(--dark);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;line-height:20px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:200;max-width:min(92vw,420px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.notes-btn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:90;background:#fff;border:1px solid var(--ink);border-radius:60px;height:36px;padding:0 14px;font:500 14px/20px var(--font-body);box-shadow:0 2px 8px rgba(13,23,34,.2)}
+.notes-panel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100%);background:#fff;z-index:150;box-shadow:-4px 0 24px rgba(13,23,34,.25);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;visibility:hidden}
+.notes-panel.open{transform:none;visibility:visible}
+.notes-panel .nb{padding:16px;overflow:auto;display:grid;gap:16px;align-content:start;font-size:14px;line-height:20px}
+.notes-panel h3{font:600 14px/20px var(--font-head);text-transform:uppercase;letter-spacing:.04em;color:var(--mid);margin-bottom:6px}
+.notes-panel ul{margin:0;padding-left:18px;display:grid;gap:6px}
+
+/* desktop (matches the desktop mock-up) */
+@media(min-width:1080px){
+  body{background:var(--canvas)}
+  .rail{max-width:1368px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+  .m{display:none}.d{display:inline}
+  .nav{height:64px;background:#fff}
+  .nav-l{display:flex;align-items:center;gap:40px}
+  .nav-links{display:flex;gap:4px;align-items:center}
+  .nav-links button{height:40px;padding:0 12px;border-radius:8px;font:500 14px/20px var(--font-body);display:inline-flex;align-items:center;gap:4px}
+  .nav-links button:hover{background:var(--canvas)}
+  .nav-links .askguru{color:var(--blue)}
+  .nav-r{display:flex;align-items:center;gap:4px}.nav-ic{display:grid}.avatar-nav{display:none}
+  .dhead{background:var(--canvas);padding-block:24px 8px}
+  .dh-grid{display:grid;grid-template-columns:1fr auto;column-gap:24px;align-items:center}
+  .dh-grid>*{grid-column:1}
+  .dh-grid .dname{font-size:32px;line-height:40px;margin:12px 0 8px}
+  .dh-grid .rating-row{gap:16px}
+  .dh-grid .actions{grid-column:2;grid-row:2;margin:0;justify-self:end}
+  .ulink{font:inherit;color:var(--ink);text-decoration:underline;cursor:pointer;padding:0;text-align:left}
+  .rating-row .cnt{color:var(--ink);text-decoration:underline}
+  .rating-row .num{font:600 20px/24px var(--font-body)}
+  .stars{width:84px}.stars svg{width:16.8px}
+  .meta{display:inline-flex;align-items:center;gap:6px;font-size:16px;line-height:24px}
+  .meta::before{content:"";width:3px;height:3px;border-radius:50%;background:var(--ph);margin-right:10px}
+  .dlogo-img{height:38px}.badge-img{height:36px}
+  .act{border-color:var(--ink);height:40px;padding:0 16px;gap:8px}
+  .act:hover{background:var(--canvas)}
+  .act-dir{order:1}.act-save{order:2}.act-call{display:none}
+  .act.primary{order:3;background:var(--blue);border-color:var(--blue);color:#fff;padding:0 16px}
+  .act.primary:hover{background:var(--blue-d)}
+  .actions{gap:8px}
+  .compact{background:var(--canvas);box-shadow:0 1px 0 var(--line)}
+  .compact .rail{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-top:12px;padding-bottom:12px}
+  .compact .cname{font-size:20px}
+  .compact .actions{margin:0}
+  .tabs{box-shadow:0 1px 0 var(--line)}
+  .tabs .rail{justify-content:flex-start}
+  .tab{flex:0 0 auto;padding:0 24px;font-size:14px}
+  .inv-wrap{width:calc(100% - 48px);max-width:1320px;margin:16px auto 0;background:#fff;border-radius:16px;padding:16px}
+  .sec{margin:0}
+  .inv-wrap .rail{max-width:none;padding-left:0;padding-right:0}
+  .inv-top{display:flex;justify-content:space-between;align-items:center;padding-block:4px 16px}
+  .inv-top .pill-row{display:none}
+  .count-row{display:contents}
+  #found{font-size:16px;line-height:24px}
+  .count-row .link{order:2;margin-left:24px;color:var(--ink);font-size:16px;line-height:24px}
+  .dsort{order:1;margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:16px}
+  .dsort{cursor:pointer}
+  .grid-wrap{border-top:0}
+  .inv-cols{display:grid;grid-template-columns:232px 1fr;gap:16px;align-items:start}
+  .sidebar{display:block;position:sticky;top:calc(var(--cb-h) + var(--tabs-h) + 12px);max-height:calc(100vh - var(--cb-h) - var(--tabs-h) - 24px);overflow:auto;padding-right:4px}
+  .sb-acc{box-shadow:none;border:1px solid var(--line);margin-bottom:8px;border-radius:8px}
+  .grid{padding-block:0 8px;gap:16px}
+  .promo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:#fff;border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 2px 8px rgba(13,23,34,.08)}
+  .promo .pic{width:56px;height:56px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font:600 24px/1 var(--font-head)}
+  .promo p{margin:0;font-size:14px;line-height:20px;font-weight:500}
+  .promo h3{font-size:18px}
+  .sec{background:transparent;border:0;padding:16px 24px 0}
+  .sec>.rail{max-width:1320px;background:#fff;border-radius:16px;padding:24px}
+  .rv-grid{grid-template-columns:288px 1fr;gap:24px}
+  .summary{position:static}
+  .sum-badge{display:block;height:40px;width:auto;justify-self:start}
+  .sum-top{flex-direction:column;align-items:center;gap:4px;text-align:center}
+  .cats{display:flex;flex-wrap:wrap;gap:6px 0;font-size:12px;line-height:16px;color:var(--mid)}
+  .cats span{padding:0 8px 0 0;margin-right:8px;border-right:1px solid var(--line)}
+  .cats span:last-child{border:0}
+  .cats b{color:var(--ink);font-weight:600}
+  .rtop{grid-template-columns:1fr auto;align-items:center}
+  .rtop .chips{grid-column:1/-1}
+  .tools{grid-template-columns:160px auto}
+  .more-row{grid-template-columns:auto auto;justify-content:start}
+  #rmore{background:#fff;color:var(--ink);border-color:var(--ink)}
+  #rmore:hover{background:var(--canvas)}
+  #rwrite{background:var(--blue);color:#fff;border-color:var(--blue)}
+  #rwrite:hover{background:var(--blue-d)}
+  .about-grid{grid-template-columns:repeat(3,1fr);gap:16px;align-items:stretch}
+  .about-right{display:contents}
+  .alist{border:1px solid var(--line);border-radius:12px;padding:20px;gap:14px}
+  .map{aspect-ratio:auto;height:100%;min-height:240px}
+  .mapbtn{height:100%}
+  .award{flex-direction:column;text-align:center;background:#e4f5fe;justify-content:center;padding:24px;border-radius:12px}
+  .award-img{width:150px}
+  .near{margin:0;padding:16px 0 8px}
+  .ncard{flex:0 0 calc((100% - 48px)/4.4)}
+}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+<symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/></symbol>
+<symbol id="i-dir" viewBox="0 0 24 24"><path d="M12 2.5 21.5 12 12 21.5 2.5 12z"/><path d="M8.5 13v-1.5A1.5 1.5 0 0 1 10 10h5M13 7.5 15.5 10 13 12.5"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+<symbol id="i-sort" viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5s-8-4.9-8-11A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5c0 6.1-8 11-8 11z"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+<symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+<symbol id="i-thumb" viewBox="0 0 24 24"><path d="M7 10v10H4V10zM7 10l4-7a2 2 0 0 1 2 2v4h5.5a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.3 20H7"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="19" r="1.4" fill="currentColor"/></symbol>
+<symbol id="i-building" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-4h4v4"/></symbol>
+<symbol id="i-star-o" viewBox="0 0 24 24"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17.2l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor" stroke="none"/></symbol>
+</defs>
+</svg>
+
+<div class="page" id="page">
+  <nav class="nav" aria-label="Site">
+    <div class="rail"><div class="nav-l"><img src="data:image/png;base64,__LOGO__" alt="CarGurus"><div class="nav-links"><button data-action="toast" data-msg="Site navigation isn't part of this prototype.">Shop <svg class="ic" aria-hidden="true"><use href="#i-down"/></svg></button><button data-action="toast" data-msg="Site navigation isn't part of this prototype.">Sell <svg class="ic" aria-hidden="true"><use href="#i-down"/></svg></button><button data-action="toast" data-msg="Site navigation isn't part of this prototype.">Finance</button><button data-action="toast" data-msg="Site navigation isn't part of this prototype.">Research</button><button class="askguru" data-action="toast" data-msg="Site navigation isn't part of this prototype.">&#10022; AskGuru</button></div></div><div class="nav-r"><button class="icon-btn nav-ic" data-action="toast" data-msg="Site navigation isn't part of this prototype." aria-label="Favorites"><svg class="ic lg" aria-hidden="true"><use href="#i-heart"/></svg></button><button class="icon-btn nav-ic" data-action="toast" data-msg="Site navigation isn't part of this prototype." aria-label="Account"><svg class="ic lg" aria-hidden="true"><use href="#i-user"/></svg></button><span class="avatar-nav" aria-hidden="true">P</span></div></div>
+  </nav>
+
+  <header class="dhead" id="dhead">
+    <div class="rail dh-grid">
+      <div class="dhead-top"><img class="dlogo-img" src="data:image/png;base64,__BERNARDI__" alt="Bernardi Honda of Natick"><img class="badge-img" src="data:image/png;base64,__TOPRATED__" alt="Top Rated Dealer 2027"></div>
+      <h1 class="dname" id="dname">Bernardi Automotive Group of Natick</h1>
+      <div class="rating-row"><span class="stars out" aria-hidden="true"><span class="bg">__STAR5O__</span><span class="fg" style="width:92%">__STAR5__</span></span><span class="num">4.6</span><button class="cnt link" data-action="goto" data-target="reviews"><span class="pp">(</span>36 reviews<span class="pp">)</span></button><span class="meta"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg><button type="button" class="ulink" data-action="toast" data-msg="Not available in prototype">960 Worcester Street, Natick, MA, 01760</button></span><span class="meta"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg><button type="button" class="ulink" data-action="toast" data-msg="Not available in prototype">(508) 794-8789</button></span></div>
+      <div class="actions" data-actions>__ACTIONS__</div>
+    </div>
+  </header>
+
+  <div class="compact" id="compact" aria-hidden="true">
+    <div class="rail"><div class="cname">Bernardi Automotive Group of Natick</div><div class="actions" data-actions>__ACTIONS__</div></div>
+  </div>
+
+  <nav class="tabs" id="tabs" aria-label="Page sections">
+    <div class="rail">
+      <button class="tab" data-action="goto" data-target="inventory" aria-current="true" id="tab-inventory"><span>Inventory (<span data-inv-count>27</span>)</span></button>
+      <button class="tab" data-action="goto" data-target="reviews" id="tab-reviews">Reviews</button>
+      <button class="tab" data-action="goto" data-target="about" id="tab-about">About</button>
+    </div>
+  </nav>
+
+  <main>
+    <section id="inventory" aria-label="Inventory">
+      <div class="inv-wrap">
+        <div class="rail inv-top">
+          <div class="pill-row">
+            <button class="pill" data-action="open-filters"><svg class="ic"><use href="#i-sliders"/></svg>Filter<span class="badge" id="fbadge" hidden>0</span></button>
+            <button class="pill" data-action="toast" data-msg="Not available in prototype"><svg class="ic"><use href="#i-sort"/></svg>Sort</button>
+          </div>
+          <div class="count-row"><span id="found" aria-live="polite">27 vehicles found</span><button class="link" data-action="toast" data-msg="Not available in prototype"><svg class="ic"><use href="#i-pin"/></svg>Update location</button></div>
+          <button type="button" class="dsort" data-action="toast" data-msg="Not available in prototype"><svg class="ic" aria-hidden="true"><use href="#i-sort"/></svg>Best match</button>
+        </div>
+        <div class="grid-wrap"><div class="rail inv-cols"><aside class="sidebar" id="sidebar" aria-label="Filters"></aside><div class="grid-col"><div class="grid" id="grid"></div><div id="pager"></div></div></div></div>
+      </div>
+    </section>
+
+    <section class="sec" id="reviews" aria-label="Reviews">
+      <div class="rail">
+        <h2>Reviews &amp; Ratings</h2>
+        <div class="rv-grid">
+          <div class="summary">
+            <img class="sum-badge" src="data:image/png;base64,__TOPRATED__" alt="Top Rated Dealer 2027">
+            <div class="sum-top"><div class="big">4.6</div><div><span class="stars out" aria-label="4.6 out of 5"><span class="bg">__STAR5O__</span><span class="fg" style="width:92%">__STAR5__</span></span><div class="cnt">36 reviews</div></div></div>
+            <div class="dist" id="dist"></div>
+            <p class="ver">All reviews are verified visits to the dealer. <button class="link" data-action="toggle-ver" aria-expanded="false">Learn More</button></p>
+            <div class="cats" aria-label="Category ratings"><span>Dealership communication: <b>4.9</b></span><span>Price transparency: <b>4.5</b></span><span>Condition accuracy: <b>4.2</b></span><span>Staff helpfulness: <b>4</b></span><span>Time at dealership: <b>3.7</b></span><span>Financing process: <b>3.7</b></span><span>Selling/Trade-in process: <b>3.5</b></span></div>
+            <p class="ver-more" id="vermore" hidden>Reviewers confirm a visit, purchase or service with this dealer before their review is published. CarGurus checks each one against dealer records.</p>
+          </div>
+          <div>
+            <div class="rtop">
+              <div class="field"><svg class="ic lg"><use href="#i-search"/></svg><input class="input s" id="rsearch" type="search" placeholder="Search reviews" aria-label="Search reviews"></div>
+              <div class="tools">
+                <select class="input" id="rsort" aria-label="Sort reviews"><option value="new">Newest first</option><option value="high">Highest rated</option><option value="low">Lowest rated</option><option value="help">Most helpful</option></select>
+                <button class="pill" style="flex:none;height:48px;padding:0 20px;border-radius:8px" data-action="open-rfilter"><svg class="ic"><use href="#i-sliders"/></svg>Filter</button>
+              </div>
+              <div class="chips" id="rchips"></div>
+            </div>
+            <div id="rlist"></div>
+            <div class="more-row"><button class="btn fill" id="rmore" data-action="more-reviews">Show next 10 reviews</button><button class="btn line" id="rwrite" data-action="write-review">Write a review</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="about" aria-label="About this dealership">
+      <div class="rail">
+        <h2 class="lg">About this dealership</h2>
+        <div class="about-grid">
+          <div class="alist">
+            <div class="arow"><svg class="ic lg"><use href="#i-pin"/></svg><div class="stack"><span>960 Worcester Street, Natick, MA, 01760<button class="icon-copy" data-action="copy" data-text="960 Worcester Street, Natick, MA, 01760" aria-label="Copy address"><svg class="ic"><use href="#i-copy"/></svg></button></span><button type="button" class="link" data-action="toast" data-msg="Not available in prototype"><svg class="ic"><use href="#i-dir"/></svg>Get directions</button></div></div>
+            <div class="arow"><svg class="ic lg"><use href="#i-clock"/></svg><div class="stack"><span><b class="is-open" style="font-weight:400">Open</b> &nbsp;Closes at 8 PM <button class="link" data-action="toggle-hours" aria-expanded="false" style="margin-left:6px">Hours</button></span><div class="hours" id="hours" hidden><span>Mon–Fri</span><span>9 AM – 8 PM</span><span>Saturday</span><span>9 AM – 6 PM</span><span>Sunday</span><span>Closed</span></div></div></div>
+            <div class="arow"><svg class="ic lg"><use href="#i-phone"/></svg><div class="stack"><span>Sales (508) 794-8789</span><span>Services (508) 794-8789</span></div></div>
+            <div class="arow"><svg class="ic lg"><use href="#i-globe"/></svg><div class="stack"><a class="link" href="#" data-action="dead">Visit dealer website</a></div></div>
+            <div class="arow"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M6.17993 14.6667L6.16006 8.83334H3.56006V6.33334H6.16006V4.66668C6.16006 2.41734 7.6087 1.33334 9.69552 1.33334C10.6951 1.33334 11.5542 1.4049 11.8046 1.43689V3.78757L10.3573 3.7882C9.22236 3.7882 9.00261 4.30676 9.00261 5.06771V6.33334H12.2267L11.3601 8.83334H9.0026V14.6667H6.17993Z" fill="#0D1722"/></svg><div class="stack"><a class="link" href="#" data-action="dead">Facebook</a></div></div>
+            <div class="arow"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M15.3682 4.8C15.1766 3.5 14.6016 2.6 13.2599 2.4C11.1516 2 7.89323 2 7.89323 2C7.89323 2 4.6349 2 2.52656 2.4C1.1849 2.6 0.514062 3.5 0.418229 4.8C0.226562 6.1 0.226562 8 0.226562 8C0.226562 8 0.226562 9.9 0.418229 11.2C0.609896 12.5 1.1849 13.4 2.52656 13.6C4.6349 14 7.89323 14 7.89323 14C7.89323 14 11.1516 14 13.2599 13.6C14.6016 13.3 15.1766 12.5 15.3682 11.2C15.5599 9.9 15.5599 8 15.5599 8C15.5599 8 15.5599 6.1 15.3682 4.8ZM5.97656 11V5L10.7682 8L5.97656 11Z" fill="#0D1722"/></svg><div class="stack"><a class="link" href="#" data-action="dead">YouTube</a></div></div>
+          </div>
+          <div class="about-right">
+            <button type="button" class="map mapbtn" data-action="toast" data-msg="Not available in prototype" aria-label="Map of dealership location">__MAP__</button>
+            <div class="award"><img src="data:image/png;base64,__TOPRATED__" alt="Top Rated Dealer 2027" class="award-img"><div><b>Top Rated Dealer 2027</b><p>This award recognizes dealers whose CarGurus shopper reviews average 4.5 out of 5 stars or higher.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" aria-label="Dealers nearby">
+      <div class="rail">
+        <div class="sec-head"><h2 class="lg">Dealers nearby</h2><div class="nav-arrows"><button class="icon-btn" data-action="near" data-dir="-1" aria-label="Previous dealers"><svg class="ic lg"><use href="#i-left"/></svg></button><button class="icon-btn" data-action="near" data-dir="1" aria-label="Next dealers"><svg class="ic lg"><use href="#i-right"/></svg></button></div></div>
+        <div class="near" id="near" tabindex="0" aria-label="Nearby dealers"></div>
+      </div>
+    </section>
+  </main>
+  <footer class="foot"><div class="rail"><span>&copy; 2026 CarGurus</span><span>Prototype with example data</span></div></footer>
+</div>
+
+<div class="overlay" id="overlay" hidden><div class="scrim" data-action="close-sheet"></div><div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<button class="notes-btn" id="notesBtn" data-action="notes" hidden>Notes</button>
+<aside class="notes-panel" id="notes" aria-label="Design notes"><div class="sh-head"><h2 id="notes-title">Design notes and questions</h2><button class="icon-btn" data-action="notes" aria-label="Close notes"><svg class="ic lg"><use href="#i-x"/></svg></button></div><div class="nb">
+<div><h3>Built into this prototype</h3><ul><li>Compact header and section tabs pin once the header scrolls away.</li><li>Tabs scroll to their section. The active tab follows manual scrolling.</li><li>Contact opens a bottom sheet. Check availability opens it with the vehicle filled in.</li><li>Filter and Sort apply to the 27 example vehicles. The count updates live.</li><li>Review search, sort, star filter, helpful votes and Show full review work.</li></ul></div>
+<div><h3>Open questions</h3><ul><li>Directions sits in the header and the About section. Keep both, or header only?</li><li>"Update location" next to the vehicle count has no spec. What does it change?</li><li>The Figma dealer reply says "Herb Chambers Honda" on a Bernardi page. Replaced with Bernardi Honda here.</li><li>Star color needs confirming against Chassis.</li><li>Dealer cards in Dealers nearby: where should they go?</li></ul></div>
+<div><h3>Not real</h3><ul><li>Vehicles, photos, reviews and dealer data are examples. Car images are illustrations.</li><li>Send, Write a review, Save and favorites store nothing and send nothing.</li><li>Website, Facebook, YouTube and dealer cards show a message instead of navigating.</li><li>Tablet and desktop layouts are extrapolated. The Figma covers mobile only.</li></ul></div>
+<div><h3>For moderators</h3><ul><li>Add <b>#notes</b> to the URL to show the Notes button.</li></ul></div>
+</div></aside>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var DEALER='Bernardi Automotive Group of Natick';
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function money(n){return '$'+n.toLocaleString('en-US')}
+function icon(n,c){return '<svg class="ic '+(c||'')+'" aria-hidden="true"><use href="#i-'+n+'"/></svg>'}
+
+/* ---------- data: vehicles ---------- */
+var MODELS=[
+ {make:'Toyota',model:'RAV4',trims:['XLE AWD','LE AWD','Limited AWD'],body:'SUV',dt:'AWD',tr:'Automatic',base:30500},
+ {make:'Honda',model:'CR-V',trims:['EX-L AWD','EX AWD','Sport AWD'],body:'SUV',dt:'AWD',tr:'CVT',base:31500},
+ {make:'Honda',model:'Accord',trims:['Sport','EX-L','Touring'],body:'Sedan',dt:'FWD',tr:'Automatic',base:28500},
+ {make:'Honda',model:'Civic',trims:['Touring','Sport','EX'],body:'Sedan',dt:'FWD',tr:'CVT',base:25000},
+ {make:'Subaru',model:'Outback',trims:['Premium','Limited','Touring'],body:'Wagon',dt:'AWD',tr:'CVT',base:32500},
+ {make:'Honda',model:'Pilot',trims:['EX-L AWD','Touring AWD','Sport AWD'],body:'SUV',dt:'AWD',tr:'Automatic',base:38500},
+ {make:'Toyota',model:'Camry',trims:['SE','XLE','LE'],body:'Sedan',dt:'FWD',tr:'Automatic',base:27500},
+ {make:'Ford',model:'F-150',trims:['XLT 4WD','Lariat 4WD','XL 4WD'],body:'Truck',dt:'4WD',tr:'Automatic',base:44000},
+ {make:'Mazda',model:'CX-5',trims:['Touring AWD','Select AWD','Premium AWD'],body:'SUV',dt:'AWD',tr:'Automatic',base:30000}
+];
+var EXT=['White','Black','Gray','Silver','Blue','Red'], INT=['Black','Gray','Beige'];
+var DEALS=['great','good','fair','good','great','high','good','great','fair'];
+var CITIES=[['Natick, MA',24],['Natick, MA',2],['Framingham, MA',6],['Wellesley, MA',8],['Natick, MA',2],['Needham, MA',10],['Waltham, MA',12],['Framingham, MA',6],['Boston, MA',18]];
+var CARS=[];
+MODELS.forEach(function(m,i){for(var k=0;k<3;k++){
+  var year=2023-((i+k*2)%5), miles=Math.round((16000+((i*7919+k*13007)%62000))/100)*100;
+  var price=Math.round((m.base*(1-(2023-year)*0.055)-miles*0.05)/100)*100;
+  var c=CITIES[(i+k)%CITIES.length];
+  CARS.push({make:m.make,model:m.model,trim:m.trims[k],body:m.body,dt:m.dt,tr:m.tr,year:year,miles:miles,price:price,
+    deal:DEALS[(i+k*4)%DEALS.length],ext:EXT[(i*2+k)%EXT.length],int:INT[(i+k)%INT.length],city:c[0],dist:c[1],
+    delivery:(i+k)%3===0,drop:((i+k)%4===1)?500*(1+k):0,spons:(i+k)%5===2,cert:(i+k)%3!==1,rank:CARS.length});
+}});
+CARS[0]=Object.assign(CARS[0],{year:2021,miles:52300,price:24500,deal:'great',ext:'Blue',trim:'XLE AWD',city:'Natick, MA',dist:24,drop:2500,spons:true,cert:true,delivery:true,rank:0});
+var DEALW={great:['Great Deal','#078a0b','up','This price is well below the estimated market value for similar cars nearby.'],good:['Good Deal','#4e9f3d','up','This price is below the estimated market value for similar cars nearby.'],fair:['Fair Deal','#d89a00','check','This price is close to the estimated market value for similar cars nearby.'],high:['High Price','#e0701a','up','This price is above the estimated market value for similar cars nearby.']};
+var COLORS={White:'#f1f3f5',Black:'#1c2128',Gray:'#7d8590',Silver:'#b7bfc7',Blue:'#2a4f9e',Red:'#b3262c'};
+
+function carSVG(c,id){
+  var col=COLORS[c.ext]||'#888', win='#9fb3c8', b=c.body, body, glass, wheels;
+  if(b==='Sedan'){body='M34 146 L40 126 Q44 118 54 116 L96 110 L122 84 Q128 78 138 78 L206 78 Q216 78 224 86 L240 108 L270 114 Q284 118 286 130 L288 148 Q288 154 282 154 L34 154 Z';glass='M112 108 L130 90 Q134 86 140 86 L164 86 L164 108 Z M172 86 L204 86 Q210 86 214 91 L228 108 L172 108 Z'}
+  else if(b==='Wagon'){body='M30 146 L36 126 Q40 116 52 114 L92 108 L112 80 Q118 72 130 72 L238 72 Q248 72 254 80 L270 108 L284 114 Q292 118 292 130 L292 148 Q292 154 286 154 L30 154 Z';glass='M106 106 L122 84 Q124 80 130 80 L160 80 L160 106 Z M168 80 L236 80 Q240 80 242 84 L256 106 L168 106 Z'}
+  else if(b==='Truck'){body='M26 146 L28 122 Q30 114 40 112 L72 110 L96 78 Q102 70 114 70 L168 70 Q176 70 178 80 L180 108 L292 108 Q298 108 298 116 L298 148 Q298 154 292 154 L26 154 Z';glass='M100 106 L116 82 Q118 78 124 78 L168 78 L170 106 Z'}
+  else {body='M32 146 L38 122 Q42 112 54 110 L96 104 L122 72 Q128 66 140 66 L218 66 Q230 66 238 76 L256 102 L276 108 Q290 112 292 126 L294 148 Q294 154 288 154 L32 154 Z';glass='M112 102 L132 78 Q136 74 142 74 L168 74 L168 102 Z M176 74 L216 74 Q222 74 226 79 L242 102 L176 102 Z'}
+  var wx=[90,238];
+  wheels=wx.map(function(x){return '<circle cx="'+x+'" cy="154" r="24" fill="#1c2128"/><circle cx="'+x+'" cy="154" r="12" fill="#c9d0d8"/><circle cx="'+x+'" cy="154" r="4" fill="#5e6976"/>'}).join('');
+  return '<svg class="car" viewBox="0 0 320 214" role="img" aria-label="Illustration of a '+esc(c.ext+' '+c.year+' '+c.make+' '+c.model)+'" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="bg'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1f4"/><stop offset="1" stop-color="#d3d9df"/></linearGradient></defs><rect width="320" height="214" fill="url(#bg'+id+')"/><ellipse cx="160" cy="182" rx="128" ry="12" fill="#0d1722" opacity=".14"/><path d="'+body+'" fill="'+col+'"/><path d="'+glass+'" fill="'+win+'" opacity=".92"/><path d="'+body+'" fill="none" stroke="#0d1722" stroke-opacity=".18"/>'+wheels+'</svg>';
+}
+
+/* ---------- data: reviews ---------- */
+var T5=['Great experience from start to finish. No pressure and the price was clear.','The team was friendly and helped me find a great car within my budget. The test drive was easy, and pricing was clear with no surprises. The paperwork took less than an hour.','Easy process. Responded to my questions quickly and had the car ready when I arrived.','Honest and straightforward. They showed me the history report without me asking.','Third car I have bought here. Always treated well.','Smooth trade-in and fair offer. Would recommend to anyone in the area.','Everyone I dealt with was professional and kind. Car was exactly as described.','Quick, clean and no hidden fees. The price on the site matched what I paid.'];
+var T4=['Dealership and salesman were very good. They were accommodating. I did not buy a vehicle but would consider another one if they had something in my range.','Good selection and friendly staff. Finance office took a bit long.'];
+var T3=['The sales staff was great with Mike Morris but unfortunately the communication after that fell off because I was interested in buying a vehicle that sold before I could get there.','Car was fine but the wait time was longer than I expected.'];
+var T2=['I had a disappointing experience overall. The salesperson was friendly during my visit, but communication afterward was inconsistent. I had several questions about the vehicle history and did not get answers for days.','Pricing changed once I arrived. I left without buying.'];
+var NAMES=['Maria S.','John K','Lidia I.','Sarah S','Richard','Priya N.','Dan M.','Alex T.','Chris B.','Jordan L.','Nina R.','Omar H.','Beth W.','Tom G.','Karen D.','Luis P.','Megan F.','Paul V.','Hannah C.','Sam J.','Erin O.','Victor Z.','Dana Q.','Greg A.','Tara E.','Ben Y.','Cara U.','Ian X.','Rosa M.','Kyle S.','Joy L.','Evan R.','Mia K.','Noah T.','Zoe P.','Will H.'];
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var REV=[];var MODELS_OWNED=['2021 Toyota Camry','2020 Honda Accord','2022 Honda CR-V','2019 Subaru Outback','2021 Mazda CX-5'];
+(function(){
+  var plan=[[3,T3[0],'Oct 30, 2026'],[5,T5[1],'Oct 24, 2026'],[5,'Great experience!! Great people','Oct 20, 2026'],[2,T2[0],'Oct 12, 2026'],[4,T4[0],'Aug 24, 2026']];
+  var d0=new Date(2026,7,20), t5=0,t4=1,t3=1,t2=1, left={5:26,4:2,3:2,2:1}, order=[5,5,5,4,5,5,3,5,5,5,2,5,5,5,4,5,5,5,3,5,5,5,5,5,5,5,5,5,5,5,5], i;
+  plan.forEach(function(p,ix){REV.push({id:ix,stars:p[0],text:p[1],date:new Date(p[2]),verified:ix===1,helpful:ix===0||ix===1||ix===3||ix===4?2:0,reply:ix===3||ix===4})});
+  // fill the rest to reach 36 (28 five, 3 four, 3 three, 2 two)
+  var rest=[]; for(var s in left){for(i=0;i<left[s];i++)rest.push(+s)}
+  rest.sort(function(a,b){return (a*7%5)-(b*7%5)||b-a});
+  rest.forEach(function(s,k){
+    var text=s===5?T5[(t5++)%T5.length]:s===4?T4[(t4++)%T4.length]:s===3?T3[(t3++)%T3.length]:T2[(t2++)%T2.length];
+    var d=new Date(d0.getTime()-k*4.2*864e5);
+    REV.push({id:REV.length,stars:s,text:text,date:d,verified:k%3===0,helpful:k%4===0?1:0,reply:false});
+  });
+  REV.forEach(function(r,ix){r.owned=MODELS_OWNED[ix%MODELS_OWNED.length];r.name=NAMES[ix%NAMES.length];r.init=r.name.replace(/[^A-Za-z ]/g,'').split(' ').map(function(w){return w[0]}).join('').slice(0,2).toUpperCase()});
+})();
+function fdate(d){return MON[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear()}
+function starsHTML(pct,sm,out){var s='<svg><use href="#i-star"/></svg>';var o='<svg><use href="#i-star-o"/></svg>';var five=s+s+s+s+s;var bgs=out?o+o+o+o+o:five;return '<span class="stars'+(sm?' sm':'')+(out?' out':'')+'" aria-hidden="true"><span class="bg">'+bgs+'</span><span class="fg" style="width:'+pct+'%">'+five+'</span></span>'}
+
+/* ---------- state ---------- */
+var F={makes:{},priceMax:0,milesMax:0,yearMin:0,ship:{},ext:{},int:{},dt:{},tr:{},body:{}};
+var sortKey='best', page=1, PAGE=8, chipsAll=false, favs={}, saved=false;
+var R={rating:0,verified:false,q:'',sort:'new',shown:5,helped:{}};
+
+function activeFilterCount(){var n=0;['makes','ship','ext','int','dt','tr','body'].forEach(function(k){n+=Object.keys(F[k]).filter(function(x){return F[k][x]}).length});if(F.priceMax)n++;if(F.milesMax)n++;if(F.yearMin)n++;return n}
+function has(o){return Object.keys(o).some(function(k){return o[k]})}
+function filtered(){
+  var out=CARS.filter(function(c){
+    if(has(F.makes)&&!F.makes[c.make])return false;
+    if(F.priceMax&&c.price>F.priceMax)return false;
+    if(F.milesMax&&c.miles>F.milesMax)return false;
+    if(F.yearMin&&c.year<F.yearMin)return false;
+    if(has(F.ship)&&!(F.ship['Home delivery']&&c.delivery)&&!(F.ship['Price drop']&&c.drop))return false;
+    if(has(F.ext)&&!F.ext[c.ext])return false;
+    if(has(F.int)&&!F.int[c.int])return false;
+    if(has(F.dt)&&!F.dt[c.dt])return false;
+    if(has(F.tr)&&!F.tr[c.tr])return false;
+    if(has(F.body)&&!F.body[c.body])return false;
+    return true});
+  var by={best:function(a,b){return a.rank-b.rank},plow:function(a,b){return a.price-b.price},phigh:function(a,b){return b.price-a.price},mlow:function(a,b){return a.miles-b.miles},ynew:function(a,b){return b.year-a.year},near:function(a,b){return a.dist-b.dist}};
+  return out.sort(by[sortKey]);
+}
+
+/* ---------- inventory render ---------- */
+function tileHTML(c,ix){
+  var dw=DEALW[c.deal], mo=Math.round(c.price*0.0159/10)*10, id='c'+c.rank;
+  var fav=favs[id];
+  return '<article class="tile" data-id="'+id+'"><div class="photo">'+carSVG(c,ix)+
+   '<button class="fav" data-action="fav" data-id="'+id+'" aria-pressed="'+(!!fav)+'" aria-label="Save '+esc(c.year+' '+c.make+' '+c.model)+'">'+icon('heart')+'</button>'+
+   (c.drop?'<div class="drop"><b>Price drop</b>'+money(c.drop)+'</div>':'')+'</div>'+
+   '<div class="tbody">'+(c.spons?'<div class="spons">Sponsored by Prestige Motors</div>':'')+
+   '<div><div class="ttlrow"><h3 class="ttl">'+c.year+' '+esc(c.make+' '+c.model)+'</h3><button class="kebab" data-action="toast" data-msg="More actions aren\'t part of this prototype." aria-label="More actions">'+icon('dots')+'</button></div><div class="sub"><span>'+esc(c.trim)+'</span><span class="dot">&middot;</span><span>'+c.miles.toLocaleString('en-US')+' mi</span></div></div>'+
+   '<div class="loc">'+icon('pin')+'<div>'+esc(c.city)+'<small>'+c.dist+' mi away</small></div></div>'+
+   '<div class="pricerow"><div><span class="deal"><i style="background:'+dw[1]+'">'+icon(dw[2])+'</i>'+dw[0]+' <button class="info-btn" data-action="deal-info" data-id="'+id+'" aria-label="About this deal rating">'+icon('info')+'</button></span>'+(c.cert?'<div class="cert">Manufacturer Certified</div>':'')+'</div>'+
+   '<div class="price"><b>'+money(c.price)+'</b><span class="mo">'+money(mo)+'/mo est.</span><span class="fee">Price includes fees</span></div></div>'+
+   '<button class="btn fill block" data-action="contact" data-id="'+id+'">Check availability</button></div></article>';
+}
+function renderInventory(){
+  var list=filtered(), pages=Math.max(1,Math.ceil(list.length/PAGE));
+  if(page>pages)page=pages;
+  var slice=list.slice((page-1)*PAGE,page*PAGE);
+  var tl=slice.map(function(c,i){return tileHTML(c,i)});if(page===1&&tl.length>5)tl.splice(5,0,'<div class="promo"><span class="pic">$</span><h3>Selling your car?</h3><p>Get multiple cash offers in minutes.</p><button class="btn line sm" data-action="toast" data-msg="Selling isn\'t part of this prototype.">Get your offers</button></div>');
+  $('#grid').innerHTML=slice.length?tl.join(''):'';
+  if(!slice.length){$('#grid').innerHTML='<div class="empty" style="grid-column:1/-1"><h3>No vehicles match your filters</h3><p>Try removing a filter to see more of this dealer\'s inventory.</p><button class="btn line" data-action="clear-filters">Clear all filters</button></div>'}
+  $('#found').textContent=list.length+' vehicle'+(list.length===1?'':'s')+' found';
+  $$('[data-inv-count]').forEach(function(e){e.textContent=list.length});
+  var n=activeFilterCount(),b=$('#fbadge');b.hidden=!n;b.textContent=n;
+  var pg='';
+  if(pages>1){pg='<div class="pager" role="navigation" aria-label="Pagination"><button class="pg" data-action="page" data-p="'+(page-1)+'" '+(page===1?'disabled':'')+' aria-label="Previous page">'+icon('left')+'</button>';
+    for(var p=1;p<=pages;p++)pg+='<button class="pg" data-action="page" data-p="'+p+'" '+(p===page?'aria-current="true"':'')+'>'+p+'</button>';
+    pg+='<button class="pg" data-action="page" data-p="'+(page+1)+'" '+(page===pages?'disabled':'')+' aria-label="Next page">'+icon('right')+'</button></div>'}
+  $('#pager').innerHTML=pg;
+  var ds=$('#dsort');if(ds)ds.value=sortKey;
+  renderSidebar();
+}
+
+
+function chipList(){
+  var out=[];
+  Object.keys(F.makes).forEach(function(v){if(F.makes[v])out.push(['makes',v,v])});
+  if(F.priceMax)out.push(['priceMax','','Up to '+money(F.priceMax)]);
+  if(F.yearMin)out.push(['yearMin','',F.yearMin+' & newer']);
+  if(F.milesMax)out.push(['milesMax','','Under '+F.milesMax.toLocaleString('en-US')+' mi']);
+  ['ship','ext','int','dt','tr','body'].forEach(function(k){Object.keys(F[k]).forEach(function(v){if(F[k][v])out.push([k,v,v])})});
+  return out;
+}
+function renderSidebar(){
+  var sb=$('#sidebar');if(!sb)return;
+  var top=sb.scrollTop,chips=chipList(),vis=chipsAll?chips:chips.slice(0,4),h='';
+  if(chips.length){h+='<div class="chips" style="margin-bottom:12px">'+vis.map(function(c){return '<button class="chip on" data-action="rm-filter" data-k="'+c[0]+'" data-v="'+esc(c[1])+'" aria-label="Remove filter '+esc(c[2])+'">'+esc(c[2])+' '+icon('x')+'</button>'}).join('')+'</div>';
+    if(chips.length>4)h+='<button class="link" data-action="chips-all" style="margin-bottom:12px">'+(chipsAll?'Show less':'Show more')+'</button>'}
+  var L={makes:'Make & model',price:'Price & payment',miles:'Mileage',year:'Years',ext:'Exterior color',int:'Interior color',dt:'Drivetrain',tr:'Transmission',body:'Body style'};
+  h+=['makes','price','miles','year','ext','int','dt','tr','body'].map(function(k){var n=selCount(k),o=!!accOpen[k];
+    return '<div class="acc sb-acc"><button type="button" data-action="toast" data-msg="Not available in prototype" data-k="'+k+'" aria-expanded="'+o+'"><span>'+esc(L[k])+(n?'<span class="sel">'+n+'</span>':'')+'</span>'+icon('down')+'</button>'+(o?'<div class="panel">'+panelHTML(k)+'</div>':'')+'</div>'}).join('');
+  sb.innerHTML=h;sb.scrollTop=top;
+}
+function sheetIs(kind){return !$('#overlay').hidden&&$('#sheet').dataset.kind===kind}
+
+/* ---------- reviews render ---------- */
+function reviewList(){
+  var q=R.q.trim().toLowerCase();
+  var l=REV.filter(function(r){return (!R.rating||r.stars===R.rating)&&(!R.verified||r.verified)&&(!q||(r.text+' '+r.name).toLowerCase().indexOf(q)>-1)});
+  var s={new:function(a,b){return b.date-a.date},high:function(a,b){return b.stars-a.stars||b.date-a.date},low:function(a,b){return a.stars-b.stars||b.date-a.date},help:function(a,b){return (b.helpful+(R.helped[b.id]?1:0))-(a.helpful+(R.helped[a.id]?1:0))||b.date-a.date}}[R.sort];
+  return l.sort(s);
+}
+function renderDist(){
+  var counts={5:0,4:0,3:0,2:0,1:0};REV.forEach(function(r){counts[r.stars]++});
+  $('#dist').innerHTML=[5,4,3,2,1].map(function(s){var p=Math.round(counts[s]/REV.length*100);return '<button class="drow" data-action="rate" data-s="'+s+'" aria-pressed="'+(R.rating===s)+'" aria-label="Show '+s+' star reviews, '+p+' percent"><span class="lbl">'+s+' star'+(s>1?'s':'')+'</span><span class="bar"><i style="width:'+p+'%"></i></span><span class="pct">'+p+'%</span></button>'}).join('');
+}
+function renderReviews(){
+  var l=reviewList(), vis=l.slice(0,R.shown);
+  $('#rlist').innerHTML=vis.length?vis.map(function(r){
+    var help=r.helpful+(R.helped[r.id]?1:0), long=r.text.length>150;
+    return '<article class="rv" data-id="'+r.id+'">'+(r.id===3?'<div class="mgmt">This dealership is under new management since this review</div>':'')+'<div class="rv-head"><span class="av" aria-hidden="true">'+r.init+'</span><div class="rv-meta"><div class="n">'+esc(r.name)+'</div>'+starsHTML(r.stars*20,true)+'</div><div class="rv-right">'+(r.verified?'<span class="tag">Verified purchase</span>':'')+'<span class="rv-date">'+fdate(r.date)+'</span></div></div>'+(r.verified?'<div class="purch">Purchased '+esc(r.owned)+'</div>':'')+
+     '<p class="rv-text'+(long?' clamp':'')+'">'+esc(r.text)+'</p>'+(long?'<button class="link" data-action="expand-review" style="justify-self:start"><span class="m">Show full review</span><span class="d">Read full review</span>'+icon('down')+'</button>':'')+
+     '<div class="rv-foot"><span>'+(help?help+' '+(help===1?'person':'people')+' found this review helpful.':'')+'</span><button class="help" data-action="helpful" data-id="'+r.id+'" aria-pressed="'+(!!R.helped[r.id])+'">'+icon('thumb')+'Helpful</button></div>'+
+     
+(r.reply?'<div class="reply"><div class="rh">Response from Bernardi Honda<span>Sep 2, 2026</span></div><p>'+esc(r.name.split(' ')[0])+', thank you for the review. We appreciate this feedback and will make sure it gets addressed with the appropriate members of our team.</p></div>':'')+'</article>';
+  }).join(''):'<div class="empty"><h3>No reviews match</h3><p>Try a different search or clear the filters.</p><button class="btn line" data-action="clear-reviews">Clear filters</button></div>';
+  var left=l.length-vis.length, mb=$('#rmore');mb.hidden=left<=0;mb.textContent='Show next '+Math.min(10,left)+' reviews';
+  var chips='';if(R.rating)chips+='<button class="chip on" data-action="rate" data-s="'+R.rating+'">'+R.rating+' star'+(R.rating>1?'s':'')+' '+icon('x')+'</button>';
+  if(R.verified)chips+='<button class="chip on" data-action="verified-off">Verified purchase '+icon('x')+'</button>';
+  $('#rchips').innerHTML=chips;renderDist();
+}
+
+/* ---------- nearby ---------- */
+var NEAR=[['Key Chrysler Dodge RAM of Dover','4.6','36',27,'Dover, MA (3 mi away)'],['Herb Chambers Honda of Burlington','4.7','286',142,'Burlington, MA (3 mi away)'],['Balise Honda of Wellesley','4.5','174',86,'Wellesley, MA (2 mi away)'],['Peters Honda of Framingham','4.6','213',118,'Framingham, MA (3 mi away)'],['Wellesley Mazda','4.8','198',74,'Wellesley, MA (4 mi away)']];
+$('#near').innerHTML=NEAR.map(function(n){return '<button class="ncard" data-action="dead-dealer"><h3>'+esc(n[0])+'</h3><div class="r">'+starsHTML(Math.round(parseFloat(n[1])*20),true,true)+n[1]+' <span>('+n[2]+' reviews)</span></div><div class="nl">'+icon('building')+n[3]+' vehicles for sale</div><div class="nl">'+icon('pin')+esc(n[4])+'</div></button>'}).join('');
+
+
+/* ---------- sheets ---------- */
+var lastFocus=null,closing=false;
+function openSheet(html,opts){
+  opts=opts||{};lastFocus=document.activeElement;
+  var ov=$('#overlay'),sh=$('#sheet');sh.className='sheet'+(opts.full?' full':'');sh.innerHTML=html;sh.dataset.kind=opts.kind||'';
+  ov.hidden=false;document.body.classList.add('locked');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){ov.classList.add('open');var f=$('[autofocus],input,select,textarea,button.btn',sh);if(f&&!opts.noFocus)try{f.focus({preventScroll:true})}catch(e){}})});
+}
+function closeSheet(){
+  var ov=$('#overlay');if(ov.hidden||closing)return;closing=true;ov.classList.remove('open');
+  setTimeout(function(){ov.hidden=true;document.body.classList.remove('locked');closing=false;$('#sheet').innerHTML='';$('#sheet').dataset.kind='';if(lastFocus&&lastFocus.focus)try{lastFocus.focus({preventScroll:true})}catch(e){}},reduce?0:280);
+}
+function head(title,center){return '<div class="sh-head'+(center?' center':'')+'">'+(center?'':'')+title+'</div>'}
+function closeBtn(){return '<button class="icon-btn" data-action="close-sheet" aria-label="Close">'+icon('x','lg')+'</button>'}
+
+function contactSheet(car){
+  var msg=car?"Hi, is the "+car.year+" "+car.make+" "+car.model+" "+car.trim+" still available?":'';
+  openSheet('<form id="cform" novalidate><div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">Contact '+esc(DEALER)+'</h2>'+closeBtn()+'</div>'+
+  '<div class="sh-body"><label class="lab">What can we help you with?<select class="input" id="c-topic"><option>Availability</option><option>Schedule a test drive</option><option>Pricing</option><option>Financing</option><option>Something else</option></select></label>'+
+  '<div class="f2"><label class="lab" data-f="first">First name*<input class="input" id="c-first" autocomplete="given-name"><span class="emsg" hidden>Enter your first name.</span></label><label class="lab" data-f="last">Last name*<input class="input" id="c-last" autocomplete="family-name"><span class="emsg" hidden>Enter your last name.</span></label></div>'+
+  '<label class="lab" data-f="email">Email*<input class="input" id="c-email" type="email" autocomplete="email"><span class="emsg" hidden>Enter a valid email address.</span></label>'+
+  '<label class="lab" data-f="zip">Zip code*<input class="input" id="c-zip" inputmode="numeric" autocomplete="postal-code" maxlength="5"><span class="emsg" hidden>Enter a 5-digit zip code.</span></label>'+
+  '<label class="lab">Phone (optional)<input class="input" id="c-phone" type="tel" autocomplete="tel"></label>'+
+  '<label class="lab">Comments (optional)<textarea class="input" id="c-comments">'+esc(msg)+'</textarea></label></div>'+
+  '<div class="sh-foot"><button type="button" class="btn line" data-action="close-sheet">Cancel</button><button type="submit" class="btn fill">Send</button></div></form>',{kind:'contact'});
+}
+function submitContact(){
+  var ok=true;
+  function chk(id,test){var inp=$('#'+id),lab=inp.closest('.lab'),bad=!test(inp.value.trim());lab.classList.toggle('err',bad);$('.emsg',lab).hidden=!bad;if(bad&&ok){ok=false;inp.focus()}}
+  chk('c-first',function(v){return v.length>0});chk('c-last',function(v){return v.length>0});
+  chk('c-email',function(v){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)});chk('c-zip',function(v){return /^\d{5}$/.test(v)});
+  if(!ok)return;
+  var email=$('#c-email').value.trim();
+  $('#sheet').innerHTML='<div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">Message sent</h2>'+closeBtn()+'</div><div class="success"><div class="ok">'+icon('check')+'</div><h3>Thanks, '+esc($('#c-first').value.trim())+'</h3><p>'+esc(DEALER)+' will reply to '+esc(email)+'.</p><p style="font-size:12px;line-height:16px">Prototype only. Nothing was sent.</p><button class="btn fill" data-action="close-sheet" style="margin-top:8px">Done</button></div>';
+}
+
+var FSECTIONS=[['makes','Make & model'],['price','Price & payment'],['miles','Mileage'],['year','Years'],['ext','Exterior color'],['int','Interior color'],['dt','Drivetrain'],['tr','Transmission'],['body','Body style']];
+var accOpen={};
+function opts(key,list,type){return list.map(function(v){var on=F[key][v];return '<label class="opt"><input type="checkbox" data-f="'+key+'" value="'+esc(v)+'" '+(on?'checked':'')+'>'+(type==='color'?'<span class="swatch" style="background:'+(COLORS[v]||'#d8dbde')+'"></span>':'')+esc(v)+'</label>'}).join('')}
+function selectHTML(id,list,cur,fmt){return '<select class="input" data-s="'+id+'" aria-label="'+id+'">'+list.map(function(v){return '<option value="'+v+'" '+(v==cur?'selected':'')+'>'+fmt(v)+'</option>'}).join('')+'</select>'}
+function panelHTML(k){
+  var makes=[];CARS.forEach(function(c){if(makes.indexOf(c.make)<0)makes.push(c.make)});makes.sort();
+  if(k==='makes')return opts('makes',makes);
+  if(k==='price')return selectHTML('priceMax',[0,25000,30000,35000,40000,50000],F.priceMax,function(v){return v?'Up to '+money(v):'Any price'});
+  if(k==='miles')return selectHTML('milesMax',[0,30000,50000,75000,100000],F.milesMax,function(v){return v?'Up to '+v.toLocaleString('en-US')+' mi':'Any mileage'});
+  if(k==='year')return selectHTML('yearMin',[0,2023,2022,2021,2020,2019],F.yearMin,function(v){return v?v+' and newer':'Any year'});
+  if(k==='ship')return opts('ship',['Home delivery','Price drop']);
+  if(k==='ext')return opts('ext',EXT,'color');if(k==='int')return opts('int',INT,'color');
+  if(k==='dt')return opts('dt',['AWD','FWD','4WD']);if(k==='tr')return opts('tr',['Automatic','CVT']);if(k==='body')return opts('body',['SUV','Sedan','Wagon','Truck']);return '';
+}
+function selCount(k){if(k==='price')return F.priceMax?1:0;if(k==='miles')return F.milesMax?1:0;if(k==='year')return F.yearMin?1:0;var key=k==='makes'?'makes':k;return Object.keys(F[key]||{}).filter(function(x){return F[key][x]}).length}
+function filterSheet(){
+  var secs=[['makes','Make & model']].concat(FSECTIONS.slice(1));
+  var rows=secs.map(function(s){var k=s[0],n=selCount(k),o=!!accOpen[k];return '<div class="acc"><button type="button" data-action="acc" data-k="'+k+'" aria-expanded="'+o+'"><span>'+esc(s[1])+(n?'<span class="sel">'+n+' selected</span>':'')+'</span>'+icon('down')+'</button>'+(o?'<div class="panel">'+panelHTML(k)+'</div>':'')+'</div>'}).join('');
+  var count=filtered().length;
+  var sh=$('#sheet');
+  if(sh.dataset.kind==='filters'&&!$('#overlay').hidden){var body=$('.sh-body',sh),top=body.scrollTop;body.innerHTML=rows;body.scrollTop=top;$('#fcount').textContent='See results ('+count+')';return}
+  openSheet('<div class="sh-head center" style="padding:8px 8px"><button class="link" data-action="clear-filters" style="padding:0 8px;justify-self:start;min-height:40px">Clear all</button><h2 id="sheet-title">Filters</h2><div style="justify-self:end">'+closeBtn()+'</div></div><div class="sh-body">'+rows+'</div><div class="sh-foot"><button class="btn line" data-action="save-search">'+icon('heart')+'Save search</button><button class="btn fill" id="fcount" data-action="close-sheet">See results ('+count+')</button></div>',{full:true,kind:'filters',noFocus:true});
+}
+function sortSheet(){
+  var o=[['best','Best match'],['plow','Lowest price'],['phigh','Highest price'],['mlow','Lowest mileage'],['ynew','Newest year'],['near','Nearest to me']];
+  openSheet('<div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">Sort by</h2>'+closeBtn()+'</div><div class="sh-body"><div class="radio-list">'+o.map(function(x){return '<label class="opt"><input type="radio" name="sort" value="'+x[0]+'" '+(sortKey===x[0]?'checked':'')+'>'+x[1]+'</label>'}).join('')+'</div></div>',{kind:'sort'});
+}
+function rfilterSheet(){
+  openSheet('<div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">Filter reviews</h2>'+closeBtn()+'</div><div class="sh-body"><div><b style="font-weight:500">Rating</b><div class="radio-list" style="margin-top:8px">'+[0,5,4,3,2,1].map(function(s){return '<label class="opt"><input type="radio" name="rrate" value="'+s+'" '+(R.rating===s?'checked':'')+'>'+(s?s+' star'+(s>1?'s':''):'All ratings')+'</label>'}).join('')+'</div></div><label class="opt"><input type="checkbox" id="rver" '+(R.verified?'checked':'')+'>Verified purchase only</label></div><div class="sh-foot"><button class="btn line" data-action="clear-reviews-sheet">Clear</button><button class="btn fill" data-action="apply-rfilter">Show reviews</button></div>',{kind:'rfilter'});
+}
+function writeSheet(){
+  var st=0;
+  openSheet('<form id="wform" novalidate><div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">Write a review</h2>'+closeBtn()+'</div><div class="sh-body"><div class="lab">Overall rating*<div class="starpick" id="starpick" role="radiogroup" aria-label="Rating">'+[1,2,3,4,5].map(function(i){return '<button type="button" data-action="pickstar" data-s="'+i+'" role="radio" aria-checked="false" aria-label="'+i+' star'+(i>1?'s':'')+'"><svg><use href="#i-star"/></svg></button>'}).join('')+'</div><span class="emsg" id="w-err" hidden>Choose a rating.</span></div><label class="lab">Your review<textarea class="input" id="w-text" placeholder="What stood out about your visit?"></textarea></label></div><div class="sh-foot"><button type="button" class="btn line" data-action="close-sheet">Cancel</button><button type="submit" class="btn fill">Submit</button></div></form>',{kind:'write',noFocus:true});
+}
+function callSheet(){
+  openSheet('<div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">Call '+esc(DEALER)+'</h2>'+closeBtn()+'</div><div class="sh-body"><div><div class="numrow"><div><small>Sales</small><span class="n">(508) 794-8789</span></div><a class="btn line sm" href="tel:+11234567890">'+icon('phone')+'Call</a></div><div class="numrow"><div><small>Services</small><span class="n">(508) 794-8789</span></div><a class="btn line sm" href="tel:+11234567890">'+icon('phone')+'Call</a></div></div><p style="margin:0;font-size:14px;line-height:20px;color:var(--mid)">Open until 8 PM today.</p></div>',{kind:'call'});
+}
+function dealSheet(car){
+  var dw=DEALW[car.deal];
+  openSheet('<div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">'+dw[0]+'</h2>'+closeBtn()+'</div><div class="sh-body"><p style="margin:0">'+dw[3]+'</p><p style="margin:0;color:var(--mid);font-size:14px;line-height:20px">Based on the '+car.year+' '+esc(car.make+' '+car.model)+' '+esc(car.trim)+', its mileage and options. Example data in this prototype.</p></div>',{kind:'deal'});
+}
+
+/* ---------- toast ---------- */
+var tt;function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},2400)}
+
+/* ---------- sticky header + scroll spy ---------- */
+var compact=$('#compact'),tabs=$('#tabs'),SECS=['inventory','reviews','about'],cbH=92,tabsH=44;
+function measure(){
+  compact.style.visibility='hidden';var was=compact.classList.contains('show');compact.classList.add('show');compact.style.transition='none';
+  cbH=Math.ceil(compact.getBoundingClientRect().height);if(!was)compact.classList.remove('show');compact.style.transition='';compact.style.visibility='';
+  tabsH=Math.round(tabs.getBoundingClientRect().height)||44;
+  document.documentElement.style.setProperty('--cb-h',cbH+'px');document.documentElement.style.setProperty('--tabs-h',tabsH+'px');
+}
+var ticking=false,navLock=0,cur='inventory';
+function setActive(id){cur=id;SECS.forEach(function(s){$('#tab-'+s).setAttribute('aria-current',s===id?'true':'false')})}
+function onScroll(){
+  var show=tabs.getBoundingClientRect().top<=cbH+1&&window.scrollY>10;
+  compact.classList.toggle('show',show);compact.setAttribute('aria-hidden',show?'false':'true');
+  if(Date.now()<navLock)return;
+  var line=cbH+tabsH+24,active=SECS[0];
+  SECS.forEach(function(s){var e=document.getElementById(s);if(e&&e.getBoundingClientRect().top<=line)active=s});
+  if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4)active='about';
+  if(active!==cur)setActive(active);
+}
+window.addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(function(){ticking=false;onScroll()})}},{passive:true});
+window.addEventListener('resize',function(){measure();onScroll()});
+function goto(id){
+  var e=document.getElementById(id);if(!e)return;
+  var top=e.getBoundingClientRect().top+window.scrollY-(cbH+tabsH)+(id==='inventory'?0:1);
+  setActive(id);navLock=Date.now()+(reduce?100:900);
+  window.scrollTo({top:Math.max(0,top),behavior:reduce?'auto':'smooth'});
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest('[data-action]');if(!t)return;var a=t.dataset.action;
+  if(a==='dead'||a==='dead-dealer'){ev.preventDefault();toast(a==='dead'?"That link isn't active in this prototype.":"Dealer pages aren't part of this prototype.");return}
+  switch(a){
+   case 'goto':goto(t.dataset.target);break;
+   case 'contact':contactSheet(t.dataset.id?CARS.filter(function(c){return 'c'+c.rank===t.dataset.id})[0]:null);break;
+   case 'save':saved=!saved;$$('[data-action="save"]').forEach(function(b){b.setAttribute('aria-pressed',saved)});toast(saved?'Dealer saved':'Dealer removed from saved');break;
+   case 'call':callSheet();break;
+   case 'close-sheet':closeSheet();break;
+   case 'open-filters':filterSheet();break;
+   case 'open-sort':sortSheet();break;
+   case 'open-rfilter':rfilterSheet();break;
+   case 'write-review':writeSheet();break;
+   case 'acc':accOpen[t.dataset.k]=!accOpen[t.dataset.k];renderSidebar();if(sheetIs('filters'))filterSheet();break;
+   case 'chips-all':chipsAll=!chipsAll;renderSidebar();break;
+   case 'rm-filter':{var k=t.dataset.k,v=t.dataset.v;if(k==='priceMax'||k==='milesMax'||k==='yearMin')F[k]=0;else F[k][v]=false;page=1;renderInventory();if(sheetIs('filters'))filterSheet();break}
+   case 'clear-filters':F={makes:{},priceMax:0,milesMax:0,yearMin:0,ship:{},ext:{},int:{},dt:{},tr:{},body:{}};page=1;renderInventory();if($('#sheet').dataset.kind==='filters'&&!$('#overlay').hidden)filterSheet();break;
+   case 'save-search':t.classList.toggle('on');toast('Search saved (prototype)');break;
+   case 'page':{var p=+t.dataset.p;if(p<1)break;page=p;renderInventory();goto('inventory');break}
+   case 'fav':{var id=t.dataset.id;favs[id]=!favs[id];t.setAttribute('aria-pressed',!!favs[id]);toast(favs[id]?'Saved to favorites':'Removed from favorites');break}
+   case 'deal-info':dealSheet(CARS.filter(function(c){return 'c'+c.rank===t.dataset.id})[0]);break;
+   case 'toast':toast(t.dataset.msg);break;
+   case 'rate':{var s=+t.dataset.s;R.rating=R.rating===s?0:s;R.shown=5;renderReviews();break}
+   case 'verified-off':R.verified=false;renderReviews();break;
+   case 'clear-reviews':R.rating=0;R.verified=false;R.q='';$('#rsearch').value='';R.shown=5;renderReviews();break;
+   case 'clear-reviews-sheet':R.rating=0;R.verified=false;R.shown=5;renderReviews();closeSheet();break;
+   case 'apply-rfilter':{var r=$('input[name="rrate"]:checked');R.rating=r?+r.value:0;R.verified=$('#rver').checked;R.shown=5;renderReviews();closeSheet();break}
+   case 'more-reviews':R.shown+=10;renderReviews();break;
+   case 'expand-review':{var p2=t.previousElementSibling;p2.classList.remove('clamp');t.remove();break}
+   case 'helpful':{var i=+t.dataset.id;R.helped[i]=!R.helped[i];var y=window.scrollY;renderReviews();window.scrollTo(0,y);break}
+   case 'toggle-ver':{var m=$('#vermore');m.hidden=!m.hidden;t.setAttribute('aria-expanded',!m.hidden);break}
+   case 'toggle-hours':{var h=$('#hours');h.hidden=!h.hidden;t.setAttribute('aria-expanded',!h.hidden);break}
+   case 'copy':{var txt=t.dataset.text;var done=function(){toast('Copied '+txt)};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){toast(txt)})}else toast(txt);break}
+   case 'near':$('#near').scrollBy({left:+t.dataset.dir*290,behavior:reduce?'auto':'smooth'});break;
+   case 'pickstar':{var n=+t.dataset.s;$$('#starpick button').forEach(function(b,ix){b.classList.toggle('on',ix<n);b.setAttribute('aria-checked',ix+1===n)});$('#starpick').dataset.v=n;$('#w-err').hidden=true;break}
+   case 'notes':{var np=$('#notes');np.classList.toggle('open');break}
+  }
+});
+document.addEventListener('change',function(ev){
+  var t=ev.target;
+  if(t.matches('input[data-f]')){F[t.dataset.f][t.value]=t.checked;page=1;renderInventory();if(sheetIs('filters'))filterSheet()}
+  else if(t.matches('select[data-s]')){F[t.dataset.s]=+t.value;page=1;renderInventory();if(sheetIs('filters'))filterSheet()}
+  else if(t.id==='dsort'){sortKey=t.value;page=1;renderInventory()}
+  else if(t.name==='sort'){sortKey=t.value;page=1;renderInventory();setTimeout(closeSheet,160)}
+  else if(t.id==='rsort'){R.sort=t.value;renderReviews()}
+});
+document.addEventListener('input',function(ev){if(ev.target.id==='rsearch'){R.q=ev.target.value;R.shown=5;renderReviews()}});
+document.addEventListener('submit',function(ev){ev.preventDefault();
+  if(ev.target.id==='cform')submitContact();
+  else if(ev.target.id==='wform'){var v=+($('#starpick').dataset.v||0);if(!v){$('#w-err').hidden=false;return}
+    $('#sheet').innerHTML='<div class="sh-head" style="padding-right:8px"><h2 id="sheet-title">Review received</h2>'+closeBtn()+'</div><div class="success"><div class="ok">'+icon('check')+'</div><h3>Thanks for your review</h3><p style="font-size:12px;line-height:16px">Prototype only. Nothing was submitted.</p><button class="btn fill" data-action="close-sheet" style="margin-top:8px">Done</button></div>'}
+});
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'){if(!$('#overlay').hidden)closeSheet();else $('#notes').classList.remove('open')}
+  if(ev.key==='Tab'&&!$('#overlay').hidden){var f=$$('button:not([disabled]),input,select,textarea,a[href]','#sheet').filter(function(e){return e.offsetParent!==null});if(!f.length)return;var first=f[0],last=f[f.length-1];
+    if(!$('#sheet').contains(document.activeElement)){first.focus();ev.preventDefault()}else if(ev.shiftKey&&document.activeElement===first){last.focus();ev.preventDefault()}else if(!ev.shiftKey&&document.activeElement===last){first.focus();ev.preventDefault()}}
+});
+function syncNotesBtn(){$('#notesBtn').hidden=location.hash!=='#notes';if(location.hash==='#notes')$('#notes').classList.add('open')}
+window.addEventListener('hashchange',syncNotesBtn);
+
+/* ---------- init ---------- */
+renderInventory();renderReviews();syncNotesBtn();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){measure();onScroll()});
+measure();onScroll();
+})();
+</script>
